@@ -89,3 +89,15 @@ model AuditLog {
   @@index([userId])
   @@map("calendar_audit_log")
 }
+
+model Room {
+  id         Int    @id @default(autoincrement())
+  building   String
+  roomNumber String
+  label      String @unique
+  purpose    String
+  capacity   Int?
+
+  @@index([building])
+  @@map("rooms")
+}
