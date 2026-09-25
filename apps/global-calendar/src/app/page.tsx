@@ -39,7 +39,30 @@ export default function Home() {
   const [defaultStart, setDefaultStart] = useState<Date | undefined>();
 
   useEffect(() => {
-    fetch('/api/auth/session').then(r => r.json()).then(d => { if (d.success) setSession(d); });
+    fetch('/api/auth/session')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setSession(d);
+      });
+  }, []);
+
+  useEffect(() => {
+    const selectHandler = (e: Event) => {
+      const event = (e as CustomEvent).detail as CalendarEvent;
+      setSelectedEvent(event);
+      setSidebarOpen(true);
+    };
+    const createHandler = () => {
+      setEditingEvent(null);
+      setDefaultStart(new Date());
+      setModalOpen(true);
+    };
+    window.addEventListener('select-event', selectHandler);
+    window.addEventListener('create-event', createHandler);
+    return () => {
+      window.removeEventListener('select-event', selectHandler);
+      window.removeEventListener('create-event', createHandler);
+    };
   }, []);
 
   const fetchEvents = useCallback(async () => {
@@ -55,17 +78,20 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const isAdmin = session?.user.isAdmin ?? false;
-  const editModules = isAdmin
-    ? ALL_MODULES
-    : (session?.permissions ?? []).filter(p => p.canEdit).map(p => p.moduleName);
+  const editModules = isAdmin ? ALL_MODULES : (session?.permissions ?? []).filter((p) => p.canEdit).map((p) => p.moduleName);
   const canEdit = editModules.length > 0;
 
   const handleEventClick = (info: any) => {
-    const event = events.find(e => e.id === info.event.id);
-    if (event) { setSelectedEvent(event); setSidebarOpen(true); }
+    const event = events.find((e) => e.id === info.event.id);
+    if (event) {
+      setSelectedEvent(event);
+      setSidebarOpen(true);
+    }
   };
 
   const handleDateClick = (info: any) => {
@@ -85,8 +111,10 @@ export default function Home() {
     if (!confirm('Are you sure you want to cancel this event?')) return;
     const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
     const data = await res.json();
-    if (data.success) { setSidebarOpen(false); fetchEvents(); }
-    else alert(data.message || 'Failed to cancel event');
+    if (data.success) {
+      setSidebarOpen(false);
+      fetchEvents();
+    } else alert(data.message || 'Failed to cancel event');
   };
 
   const handleSaveEvent = async (data: any) => {
@@ -98,14 +126,19 @@ export default function Home() {
       body: JSON.stringify(data),
     });
     const result = await res.json();
-    if (result.success) { setModalOpen(false); fetchEvents(); }
-    else alert(result.message || 'Failed to save event');
+    if (result.success) {
+      setModalOpen(false);
+      fetchEvents();
+    } else alert(result.message || 'Failed to save event');
   };
 
   const now = new Date();
   const weekAhead = new Date(now.getTime() + 7 * 86400000);
-  const next7 = events.filter(e => { const s = new Date(e.startTime); return s >= now && s <= weekAhead; }).length;
-  const modulesVisible = new Set(events.map(e => e.sourceModule)).size;
+  const next7 = events.filter((e) => {
+    const s = new Date(e.startTime);
+    return s >= now && s <= weekAhead;
+  }).length;
+  const modulesVisible = new Set(events.map((e) => e.sourceModule)).size;
 
   const stats = [
     { label: 'Visible events', value: String(events.length) },
@@ -125,7 +158,11 @@ export default function Home() {
         </div>
         {canEdit && (
           <button
-            onClick={() => { setEditingEvent(null); setDefaultStart(new Date()); setModalOpen(true); }}
+            onClick={() => {
+              setEditingEvent(null);
+              setDefaultStart(new Date());
+              setModalOpen(true);
+            }}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
           >
             <Plus className="h-4 w-4" /> Create Event
@@ -134,7 +171,7 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map(s => (
+        {stats.map((s) => (
           <div key={s.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{s.label}</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900">{s.value}</p>
@@ -144,7 +181,10 @@ export default function Home() {
 
       <div className="flex flex-wrap items-center gap-2">
         {Object.entries(MODULE_STYLE).map(([module, style]) => (
-          <span key={module} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm">
+          <span
+            key={module}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm"
+          >
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: style.text }}></span>
             {module}
           </span>
@@ -159,7 +199,7 @@ export default function Home() {
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
-            events={events.map(e => ({
+            events={events.map((e) => ({
               id: e.id,
               title: e.title,
               start: e.startTime,

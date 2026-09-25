@@ -1,14 +1,15 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { Sidebar } from '@/components/layout/sidebar';
+import { Topbar } from '@/components/layout/topbar';
+import { CommandMenu } from '@/components/command-menu';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "IITGN Global Calendar | Campus Sanchalika",
-  description: "Campus Infrastructure Management - Global Event Hub",
+  title: 'IITGN Global Calendar | Campus Sanchalika',
+  description: 'Campus Infrastructure Management - Global Event Hub',
 };
 
 export default function RootLayout({
@@ -26,6 +27,7 @@ export default function RootLayout({
             <main className="flex-1 overflow-y-auto p-6">{children}</main>
           </div>
         </div>
+        <CommandMenu />
       </body>
     </html>
   );
