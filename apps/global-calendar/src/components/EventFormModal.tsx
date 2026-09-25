@@ -15,6 +15,12 @@ interface EventFormModalProps {
 const ALL_MODULES = ['IWD', 'FINANCE', 'RND', 'HMS', 'ROOM_INFO', 'ADMIN'];
 const EVENT_TYPES = ['MEETING', 'TASK', 'DEADLINE', 'REMINDER', 'MILESTONE'];
 const VISIBILITIES = ['PUBLIC', 'MODULE_ONLY', 'ADMIN_ONLY'];
+const RECURRENCES = [
+  { label: 'Does not repeat', value: 'none' },
+  { label: 'Daily', value: 'FREQ=DAILY' },
+  { label: 'Weekly', value: 'FREQ=WEEKLY' },
+  { label: 'Monthly', value: 'FREQ=MONTHLY' },
+];
 
 export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, defaultStart, allowedModules }: EventFormModalProps) {
   const modules = allowedModules && allowedModules.length > 0 ? ALL_MODULES.filter(m => allowedModules.includes(m)) : ALL_MODULES;
@@ -26,6 +32,7 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
   const [description, setDescription] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [recurrence, setRecurrence] = useState('none');
   const [metadata, setMetadata] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -39,9 +46,13 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
       setStartTime(new Date(initialEvent.startTime).toISOString().slice(0, 16));
       setEndTime(new Date(initialEvent.endTime).toISOString().slice(0, 16));
       setMetadata((initialEvent.metadata as Record<string, string>) || {});
+      
+      // Parse existing RRULE to set dropdown
+      const existingRule = initialEvent.recurrenceRule || 'none';
+      setRecurrence(RECURRENCES.find(r => r.value === existingRule) ? existingRule : 'none');
     } else {
       setTitle(''); setEventType('TASK'); setVisibility('MODULE_ONLY');
-      setDescription(''); setMetadata({});
+      setDescription(''); setMetadata({}); setRecurrence('none');
       setSourceModule(modules[0] || 'IWD');
       if (defaultStart) {
         const start = new Date(defaultStart);
@@ -52,7 +63,7 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
         setStartTime(''); setEndTime('');
       }
     }
-  }, [initialEvent, defaultStart, isOpen]);
+  }, [initialEvent, defaultStart, isOpen, modules]);
 
   const handleMetadataChange = (key: string, value: string) => {
     setMetadata(prev => ({ ...prev, [key]: value }));
@@ -65,6 +76,7 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
       title, sourceModule, eventType, visibility, description,
       startTime: new Date(startTime).toISOString(),
       endTime: new Date(endTime).toISOString(),
+      recurrenceRule: recurrence === 'none' ? undefined : recurrence,
       metadata: Object.keys(cleanMetadata).length > 0 ? cleanMetadata : undefined,
     });
   };
@@ -111,11 +123,19 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Visibility</label>
-            <select value={visibility} onChange={e => setVisibility(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              {VISIBILITIES.map(v => <option key={v} value={v}>{v.replace('_', ' ')}</option>)}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Visibility</label>
+              <select value={visibility} onChange={e => setVisibility(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {VISIBILITIES.map(v => <option key={v} value={v}>{v.replace('_', ' ')}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Repeat</label>
+              <select value={recurrence} onChange={e => setRecurrence(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {RECURRENCES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
           </div>
 
           <div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarEvent } from '@/types';
+import { Repeat } from 'lucide-react';
 
 interface EventSidebarProps {
   event: CalendarEvent | null;
@@ -18,6 +19,13 @@ const MODULE_COLORS: Record<string, string> = {
   HMS: 'bg-amber-100 text-amber-800',
   ROOM_INFO: 'bg-red-100 text-red-800',
   ADMIN: 'bg-gray-100 text-gray-800',
+};
+
+const RRULE_LABELS: Record<string, string> = {
+  'FREQ=DAILY': 'Repeats Daily',
+  'FREQ=WEEKLY': 'Repeats Weekly',
+  'FREQ=MONTHLY': 'Repeats Monthly',
+  'FREQ=YEARLY': 'Repeats Yearly',
 };
 
 export default function EventSidebar({ event, isOpen, onClose, onEdit, onDelete, canEdit }: EventSidebarProps) {
@@ -44,9 +52,17 @@ export default function EventSidebar({ event, isOpen, onClose, onEdit, onDelete,
       <div className="flex h-full flex-col">
         <div className="flex items-start justify-between border-b border-gray-200 p-6">
           <div className="flex-1 pr-4">
-            <span className={`mb-2 inline-block rounded-full px-2 py-1 text-xs font-semibold ${MODULE_COLORS[event.sourceModule] || 'bg-gray-100 text-gray-800'}`}>
-              {event.sourceModule}
-            </span>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold ${MODULE_COLORS[event.sourceModule] || 'bg-gray-100 text-gray-800'}`}>
+                {event.sourceModule}
+              </span>
+              {event.recurrenceRule && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">
+                  <Repeat className="h-3 w-3" />
+                  {RRULE_LABELS[event.recurrenceRule] || 'Recurring'}
+                </span>
+              )}
+            </div>
             <h2 className="text-xl font-bold text-gray-900">{event.title}</h2>
           </div>
           <button onClick={onClose} className="text-2xl leading-none text-gray-400 hover:text-gray-600">&times;</button>
@@ -79,8 +95,8 @@ export default function EventSidebar({ event, isOpen, onClose, onEdit, onDelete,
 
         {canEdit && (
           <div className="flex gap-3 border-t border-gray-200 p-6">
-            <button onClick={() => onEdit(event)} className="flex-1 rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700">Edit Event</button>
-            <button onClick={() => onDelete(event.id)} className="flex-1 rounded-md border border-red-300 bg-white px-4 py-2 font-medium text-red-600 transition hover:bg-red-50">Cancel</button>
+            <button onClick={() => onEdit(event)} className="flex-1 rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700">Edit Series</button>
+            <button onClick={() => onDelete(event.id)} className="flex-1 rounded-md border border-red-300 bg-white px-4 py-2 font-medium text-red-600 transition hover:bg-red-50">Cancel Series</button>
           </div>
         )}
       </div>

@@ -5,6 +5,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import rrulePlugin from '@fullcalendar/rrule';
 import { Plus } from 'lucide-react';
 import EventSidebar from '@/components/EventSidebar';
 import EventFormModal from '@/components/EventFormModal';
@@ -87,7 +88,8 @@ export default function Home() {
   const canEdit = editModules.length > 0;
 
   const handleEventClick = (info: any) => {
-    const event = events.find((e) => e.id === info.event.id);
+    // When clicking a recurring event instance, find the parent event in our state
+    const event = events.find((e) => e.id === info.event.id || info.event.id.startsWith(e.id));
     if (event) {
       setSelectedEvent(event);
       setSidebarOpen(true);
@@ -196,19 +198,40 @@ export default function Home() {
           <div className="flex h-96 items-center justify-center text-sm text-slate-500">Loading schedule...</div>
         ) : (
           <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, rrulePlugin]}
             initialView="dayGridMonth"
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
-            events={events.map((e) => ({
-              id: e.id,
-              title: e.title,
-              start: e.startTime,
-              end: e.endTime,
-              allDay: e.isAllDay,
-              backgroundColor: (MODULE_STYLE[e.sourceModule] || MODULE_STYLE.ADMIN).bg,
-              textColor: (MODULE_STYLE[e.sourceModule] || MODULE_STYLE.ADMIN).text,
-              borderColor: 'transparent',
-            }))}
+            events={events.map((e) => {
+              const start = new Date(e.startTime);
+              const end = new Date(e.endTime);
+              const durationMs = end.getTime() - start.getTime();
+
+              const baseProps = {
+                id: e.id,
+                title: e.title,
+                allDay: e.isAllDay,
+                backgroundColor: (MODULE_STYLE[e.sourceModule] || MODULE_STYLE.ADMIN).bg,
+                textColor: (MODULE_STYLE[e.sourceModule] || MODULE_STYLE.ADMIN).text,
+                borderColor: 'transparent',
+              };
+
+              // If it has a recurrence rule, pass it to the RRule plugin
+              if (e.recurrenceRule) {
+                return {
+                  ...baseProps,
+                  rrule: e.recurrenceRule,
+                  dtstart: start.toISOString(),
+                  duration: durationMs,
+                };
+              }
+
+              // Standard event
+              return {
+                ...baseProps,
+                start: start,
+                end: end,
+              };
+            })}
             height="auto"
             dayMaxEvents={3}
             eventDisplay="block"
