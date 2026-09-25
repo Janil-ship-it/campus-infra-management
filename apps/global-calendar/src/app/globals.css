@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+  * { @apply border-border; }
+  body { @apply bg-slate-50 text-slate-900 antialiased; }
+}
+
+.fc { font-size: 0.875rem; }
+.fc .fc-toolbar-title { font-size: 1.125rem; font-weight: 600; color: #0f172a; letter-spacing: -0.01em; }
+.fc .fc-button {
+  background: transparent; border: none; box-shadow: none !important;
+  color: #475569; font-weight: 500; text-transform: capitalize;
+}
+.fc .fc-button-primary:not(:disabled):hover { background: #f1f5f9; color: #0f172a; }
+.fc .fc-button-primary.fc-button-active { background: #e2e8f0 !important; color: #0f172a !important; }
+.fc .fc-col-header-cell { background: #f8fafc; }
+.fc .fc-col-header-cell-cushion {
+  padding: 8px 4px; font-size: 0.6875rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em; color: #64748b;
+}
+.fc .fc-daygrid-day-number { padding: 6px 8px; font-size: 0.75rem; font-weight: 500; color: #64748b; }
+.fc .fc-day-today { background: #eff6ff !important; }
+.fc .fc-daygrid-day-frame { min-height: 96px; }
+.fc .fc-event { border: none; border-radius: 6px; padding: 2px 6px; font-size: 0.75rem; font-weight: 500; }
+.fc th, .fc td, .fc .fc-scrollgrid { border-color: #e2e8f0; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
