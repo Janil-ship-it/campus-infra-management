@@ -1,4 +1,4 @@
-# Campus Infra Management (Campus Sanchalika)
+# Campus Infra Management
 
 A unified platform for managing infrastructure operations at IIT Gandhinagar. Built as a modular Next.js 14 monorepo with role-based access control, audit logging, and data localization on the AV5 campus data center.
 
