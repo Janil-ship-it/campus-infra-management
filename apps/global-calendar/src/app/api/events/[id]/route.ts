@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
@@ -7,6 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { updateEventSchema } from '@/lib/validators'
 import { getAuthUser, requireAuth, canAccessModule } from '@/lib/auth'
 import { safeJson } from '@/lib/serialize'
+import { extractRoomKeys, findRoomConflicts, conflictMessage } from '@/lib/conflicts'
+
+export const dynamic = 'force-dynamic';
 
 type Ctx = { params: { id: string } }
 
@@ -69,6 +70,23 @@ export async function PUT(request: NextRequest, { params }: Ctx) {
     const nextEnd = validated.endTime ?? existing.endTime
     if (nextEnd <= nextStart) {
       return NextResponse.json({ success: false, message: 'endTime must be after startTime' }, { status: 400 })
+    }
+
+    const nextRule = validated.recurrenceRule !== undefined ? validated.recurrenceRule : existing.recurrenceRule
+    if (!nextRule) {
+      const metaForCheck = (validated.metadata !== undefined
+        ? validated.metadata
+        : (existing.metadata as Record<string, unknown> | null)) ?? {}
+      const roomKeys = extractRoomKeys(metaForCheck)
+      if (roomKeys.length > 0) {
+        const conflicts = await findRoomConflicts(prisma, nextStart, nextEnd, roomKeys, eventId)
+        if (conflicts.length > 0) {
+          return NextResponse.json(
+            { success: false, code: 'ROOM_CONFLICT', message: conflictMessage(conflicts), conflicts },
+            { status: 409 }
+          )
+        }
+      }
     }
 
     const updateData: Prisma.CalendarEventUpdateInput = {

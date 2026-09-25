@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
@@ -7,6 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { createEventSchema, eventQuerySchema } from '@/lib/validators'
 import { getAuthUser, requireAuth, canAccessModule, getVisibleModules } from '@/lib/auth'
 import { safeJson } from '@/lib/serialize'
+import { extractRoomKeys, findRoomConflicts, conflictMessage } from '@/lib/conflicts'
+
+export const dynamic = 'force-dynamic';
 
 function clientIp(req: NextRequest) {
   return req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown'
@@ -38,6 +39,19 @@ export async function POST(request: NextRequest) {
         { success: false, message: `Forbidden: no edit access to ${validated.sourceModule}` },
         { status: 403 }
       )
+    }
+
+    if (!validated.recurrenceRule) {
+      const roomKeys = extractRoomKeys(validated.metadata ?? {})
+      if (roomKeys.length > 0) {
+        const conflicts = await findRoomConflicts(prisma, validated.startTime, validated.endTime, roomKeys)
+        if (conflicts.length > 0) {
+          return NextResponse.json(
+            { success: false, code: 'ROOM_CONFLICT', message: conflictMessage(conflicts), conflicts },
+            { status: 409 }
+          )
+        }
+      }
     }
 
     const event = await prisma.$transaction(async (tx) => {

@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
-import { CommandMenu } from '@/components/command-menu';
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,10 +24,10 @@ export default function RootLayout({
           <Sidebar />
           <div className="ml-64 flex flex-1 flex-col overflow-hidden">
             <Topbar />
-            <main className="flex-1 overflow-y-auto p-6">{children}</main>
+            <main className="flex-1 overflow-y-auto p-8">{children}</main>
           </div>
         </div>
-        <CommandMenu />
+        <Toaster richColors position="top-right" closeButton />
       </body>
     </html>
   );
