@@ -24,7 +24,7 @@ export function extractRoomKeys(metadata: Record<string, unknown> | null | undef
   if (typeof metadata.building === 'string' && typeof metadata.room_number === 'string') {
     push(`${metadata.building.trim()}-${metadata.room_number.trim()}`)
   }
-  return [...new Set(keys)]
+  return Array.from(new Set(keys))
 }
 
 export async function findRoomConflicts(
