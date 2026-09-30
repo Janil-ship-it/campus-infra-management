@@ -11,7 +11,9 @@
     "db:studio": "prisma studio",
     "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
     "db:reset": "prisma migrate reset",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "fic:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/fic-seed.ts",
+    "seed:all": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/fic-seed.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -23,9 +25,11 @@
     "@fullcalendar/timegrid": "^5.11.5",
     "@prisma/client": "^5.10.0",
     "@radix-ui/react-dialog": "^1.1.23",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.4.0",
+    "fuse.js": "^7.5.0",
     "jose": "^6.2.12",
     "lucide-react": "^1.48.0",
     "next": "14.2.0",
@@ -38,6 +42,7 @@
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.19.43",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

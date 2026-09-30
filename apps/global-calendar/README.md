@@ -1,4 +1,4 @@
-# Global Calendar Module (Campus Sanchalika)
+# Global Calendar Module (Digital Infra IITGN)
 
 Unified event hub for IITGN campus modules. Owned by: Srimaan (Global Calendar).
 

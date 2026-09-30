@@ -1,21 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAuthUser, requireAuth } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic';
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const building = searchParams.get('building')
+  const minCapacity = searchParams.get('minCapacity')
 
-export async function GET(request: NextRequest) {
-  try {
-    requireAuth(await getAuthUser(request))
-    const rooms = await prisma.room.findMany({
-      orderBy: [{ building: 'asc' }, { roomNumber: 'asc' }],
-    })
-    return NextResponse.json({ success: true, rooms })
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    }
-    console.error('GET /api/rooms error:', error)
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 })
-  }
+  const where: any = {}
+  if (building) where.building = building
+  if (minCapacity) where.capacity = { gte: parseInt(minCapacity) }
+
+  const rooms = await prisma.room.findMany({
+    where,
+    orderBy: [{ building: 'asc' }, { roomNumber: 'asc' }]
+  })
+  
+  // Get unique buildings for filter dropdown
+  const buildings = await prisma.room.findMany({
+    select: { building: true },
+    distinct: ['building'],
+    orderBy: { building: 'asc' }
+  })
+
+  return NextResponse.json({ 
+    success: true, 
+    data: rooms,
+    buildings: buildings.map(b => b.building)
+  })
 }

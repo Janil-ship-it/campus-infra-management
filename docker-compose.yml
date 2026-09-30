@@ -1,0 +1,70 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: campus-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-campus_infra}
+      MYSQL_USER: ${MYSQL_USER:-campus}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-campuspass123}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - campus-net
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prisma
+    container_name: campus-migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-campus}:${MYSQL_PASSWORD:-campuspass123}@db:3306/${MYSQL_DATABASE:-campus_infra}
+    command: sh -c "cd apps/global-calendar && npx prisma migrate deploy"
+    restart: "no"
+    networks:
+      - campus-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: campus-app
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-campus}:${MYSQL_PASSWORD:-campuspass123}@db:3306/${MYSQL_DATABASE:-campus_infra}
+      JWT_SECRET: ${JWT_SECRET}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NODE_ENV: production
+    restart: unless-stopped
+    networks:
+      - campus-net
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  campus-net:
+    driver: bridge

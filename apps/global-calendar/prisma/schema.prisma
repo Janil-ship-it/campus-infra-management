@@ -16,7 +16,8 @@ model User {
   isSystemAdmin Boolean  @default(false)
   createdAt     DateTime @default(now())
 
-  permissions   UserModulePermission[]
+  permissions       UserModulePermission[]
+  eventParticipants EventParticipant[]
 
   @@map("users")
 }
@@ -38,8 +39,8 @@ model CalendarEvent {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  participants   EventParticipant[]
-  auditLogs      AuditLog[]
+  participants EventParticipant[]
+  auditLogs    AuditLog[]
 
   @@index([sourceModule])
   @@index([startTime, endTime])
@@ -53,7 +54,8 @@ model EventParticipant {
   role       String @default("ATTENDEE")
   rsvpStatus String @default("PENDING")
 
-  event      CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
   @@map("event_participants")
@@ -68,7 +70,7 @@ model UserModulePermission {
   grantedBy  Int
   grantedAt  DateTime @default(now())
 
-  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, moduleName])
   @@map("user_module_permissions")
@@ -83,7 +85,7 @@ model AuditLog {
   details   Json?
   timestamp DateTime @default(now())
 
-  event     CalendarEvent? @relation(fields: [eventId], references: [id])
+  event CalendarEvent? @relation(fields: [eventId], references: [id])
 
   @@index([timestamp])
   @@index([userId])
@@ -100,4 +102,58 @@ model Room {
 
   @@index([building])
   @@map("rooms")
+}
+
+model ServiceKey {
+  id          Int       @id @default(autoincrement())
+  name        String
+  moduleName  String
+  keyHash     String    @unique
+  keyPrefix   String
+  permissions Json
+  isActive    Boolean   @default(true)
+  lastUsed    DateTime?
+  createdAt   DateTime  @default(now())
+  createdBy   Int
+
+  @@index([moduleName])
+  @@index([keyHash])
+  @@map("service_keys")
+}
+
+// ============================================================
+// FIC Contact & Role Hierarchy Models
+// ============================================================
+
+model FunctionalCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  contacts FicContact[]
+
+  @@map("functional_categories")
+}
+
+model FicContact {
+  id                   Int      @id @default(autoincrement())
+  officialTitle        String
+  primaryEmail         String   @unique
+  secondaryEmails      String?
+  systemRole           String   @default("FIC_COORDINATOR")
+  functionalCategoryId Int
+  parentContactId      Int?
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  functionalCategory FunctionalCategory @relation(fields: [functionalCategoryId], references: [id])
+  parentContact      FicContact?        @relation("ContactHierarchy", fields: [parentContactId], references: [id])
+  secondaryContacts  FicContact[]       @relation("ContactHierarchy")
+
+  @@index([functionalCategoryId])
+  @@index([systemRole])
+  @@index([parentContactId])
+  @@map("fic_contacts")
 }

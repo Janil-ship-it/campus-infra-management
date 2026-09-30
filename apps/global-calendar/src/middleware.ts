@@ -9,6 +9,15 @@ const SECRET = new TextEncoder().encode(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Always allow static assets (logo, background image, fonts, css)
+  if (/\.(svg|png|jpe?g|gif|webp|ico|css|js|map|woff2?)$/.test(pathname)) {
+    return NextResponse.next()
+  }
+
+  // Public endpoints that bypass auth
+  if (pathname === '/api/health') return NextResponse.next()
+  if (pathname === '/api/auth/logout') return NextResponse.next()
+
   const token = request.cookies.get('gc_session')?.value
   let valid = false
   if (token) {
@@ -29,6 +38,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === '/login' || pathname === '/api/auth/login') return NextResponse.next()
+
   if (pathname.startsWith('/api/')) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
   }

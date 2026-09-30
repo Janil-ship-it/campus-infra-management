@@ -1,11 +1,12 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { CalendarDays, ShieldCheck, ScrollText, Sparkles } from "lucide-react"
+import { CalendarDays, ShieldCheck, ScrollText, Key } from "lucide-react"
 
 const navItems = [
   { href: "/", label: "Global Calendar", icon: CalendarDays },
   { href: "/admin/permissions", label: "Permissions", icon: ShieldCheck },
+  { href: "/admin/service-keys", label: "Service Keys", icon: Key },
   { href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
 ]
 
@@ -15,10 +16,10 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-slate-950 text-slate-300">
       <div className="flex h-16 items-center gap-3 border-b border-slate-800/50 px-6">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
-          <Sparkles className="h-4 w-4 text-white" />
+          <CalendarDays className="h-4 w-4 text-white" />
         </div>
         <div>
-          <p className="text-sm font-bold tracking-tight text-white">Campus Sanchalika</p>
+          <p className="text-sm font-bold tracking-tight text-white">Digital Infra IITGN</p>
           <p className="text-[10px] font-medium uppercase tracking-widest text-slate-500">IIT Gandhinagar</p>
         </div>
       </div>
@@ -47,7 +48,7 @@ export function Sidebar() {
       <div className="border-t border-slate-800/50 px-6 py-5">
         <div className="rounded-lg bg-slate-900 p-3 ring-1 ring-slate-800">
           <p className="text-xs font-semibold text-slate-300">Global Calendar</p>
-          <p className="mt-1 text-[11px] text-slate-500">v1.0.0 • Phase 3 Complete</p>
+          <p className="mt-1 text-[11px] text-slate-500">v1.0.0 • Phase 6 Complete</p>
         </div>
       </div>
     </aside>

@@ -1,169 +1,151 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { Search, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react'
+import { IITGN_MODULES } from '@/lib/modules'
+import { Search, ShieldCheck } from 'lucide-react'
 
-const MODULES = ['IWD', 'FINANCE', 'RND', 'HMS', 'ROOM_INFO', 'ADMIN', 'GLOBAL'];
-
-interface UserRow {
-  id: number;
-  email: string;
-  name: string;
-  positionTitle: string;
-  isSystemAdmin: boolean;
-  permissions: { moduleName: string; canView: boolean; canEdit: boolean }[];
-}
-
-function Toggle({ on, disabled, onChange }: { on: boolean; disabled?: boolean; onChange: () => void }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onChange}
-      className={`relative h-6 w-11 rounded-full transition ${on ? 'bg-blue-600' : 'bg-slate-300'} ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
-    >
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
-    </button>
-  );
+interface UserPermission {
+  id: string
+  userId: number
+  moduleName: string
+  canView: boolean
+  canEdit: boolean
 }
 
 export default function PermissionsPage() {
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [permissions, setPermissions] = useState<UserPermission[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  async function load() {
-    const res = await fetch('/api/users');
-    const data = await res.json();
-    if (data.success) {
-      setUsers(data.users);
-      if (selectedId === null && data.users.length > 0) setSelectedId(data.users[0].id);
-    } else {
-      setError(data.message || 'Unable to load users');
-    }
-    setLoading(false);
-  }
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/permissions').then(r => r.json()).catch(() => null),
+      fetch('/api/users').then(r => r.json()).catch(() => null),
+    ]).then(([permData, userData]) => {
+      // Accept ANY response shape so the page can never crash
+      const permList = permData?.data ?? permData?.permissions ?? []
+      const userList = userData?.data ?? userData?.users ?? []
+      setPermissions(Array.isArray(permList) ? permList : [])
+      setUsers(Array.isArray(userList) ? userList : [])
+      if (!permData && !userData) setError('Could not load permission data')
+    }).finally(() => setLoading(false))
+  }, [])
 
-  useEffect(() => { load(); }, []);
-
-  const selected = users.find(u => u.id === selectedId) || null;
-  const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(query.toLowerCase()) ||
-    u.email.toLowerCase().includes(query.toLowerCase())
-  );
-
-  async function setPermission(moduleName: string, canView: boolean, canEdit: boolean) {
-    if (!selected) return;
+  async function togglePermission(userId: number, moduleName: string, field: 'canView' | 'canEdit', currentValue: boolean) {
     const res = await fetch('/api/permissions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: selected.id, moduleName, canView, canEdit }),
-    });
-    const data = await res.json();
-    if (data.success) load();
-    else alert(data.message || 'Failed to update permission');
+      body: JSON.stringify({ userId, moduleName, [field]: !currentValue }),
+    })
+    const data = await res.json().catch(() => null)
+    if (data?.success) {
+      setPermissions(prev => {
+        const existing = prev.find(p => p.userId === userId && p.moduleName === moduleName)
+        if (existing) return prev.map(p => (p.userId === userId && p.moduleName === moduleName ? { ...p, [field]: !currentValue } : p))
+        return [...prev, { id: `${userId}-${moduleName}`, userId, moduleName, canView: field === 'canView' ? !currentValue : false, canEdit: field === 'canEdit' ? !currentValue : false }]
+      })
+    }
   }
 
-  function permFor(moduleName: string) {
-    return selected?.permissions.find(p => p.moduleName === moduleName);
-  }
+  const filteredUsers = users.filter(u =>
+    (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.positionTitle || '').toLowerCase().includes(search.toLowerCase())
+  )
 
-  if (error) {
-    return (
-      <div className="mx-auto max-w-3xl rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-        {error} — this page is restricted to System Admins.
-      </div>
-    );
-  }
+  if (loading) return <div className="p-8 text-center text-gray-500">Loading permissions...</div>
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Permissions</h1>
-        <p className="mt-1 text-sm text-slate-500">Search a user, then toggle View / Edit access per module. Changes are audit-logged.</p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 p-4">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search name or email..."
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <ShieldCheck className="h-8 w-8 text-blue-600" />
+              Department Access Control
+            </h1>
+            <p className="text-gray-600 mt-1">Manage module permissions for IITGN Faculty & Staff</p>
           </div>
-          <div className="max-h-[520px] overflow-y-auto p-2">
-            {loading && <p className="p-3 text-sm text-slate-500">Loading users...</p>}
-            {filtered.map(u => (
-              <button
-                key={u.id}
-                onClick={() => setSelectedId(u.id)}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition ${selectedId === u.id ? 'bg-blue-50 text-blue-800' : 'text-slate-700 hover:bg-slate-50'}`}
-              >
-                <div>
-                  <p className="text-sm font-medium">{u.name}</p>
-                  <p className="text-xs text-slate-500">{u.positionTitle}</p>
-                </div>
-                {u.isSystemAdmin && <ShieldCheck className="h-4 w-4 text-blue-600" />}
-              </button>
-            ))}
+          <div className="relative w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search officials..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm"
+            />
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          {selected ? (
-            <>
-              <div className="flex items-center justify-between border-b border-slate-200 p-5">
-                <div>
-                  <p className="text-lg font-semibold text-slate-900">{selected.name}</p>
-                  <p className="text-sm text-slate-500">{selected.email} • {selected.positionTitle}</p>
-                </div>
-                {selected.isSystemAdmin && (
-                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">System Admin — full access</span>
-                )}
-              </div>
-              <div className="divide-y divide-slate-100">
-                {MODULES.map(m => {
-                  const p = permFor(m);
-                  const canView = selected.isSystemAdmin ? true : (p?.canView ?? false);
-                  const canEdit = selected.isSystemAdmin ? true : (p?.canEdit ?? false);
-                  return (
-                    <div key={m} className="flex items-center justify-between px-5 py-3">
-                      <span className="text-sm font-medium text-slate-700">{m}</span>
-                      <div className="flex items-center gap-6">
-                        <label className="flex items-center gap-2 text-xs text-slate-500">
-                          View
-                          <Toggle
-                            on={canView}
-                            disabled={selected.isSystemAdmin}
-                            onChange={() => setPermission(m, !canView, !canView ? false : canEdit)}
-                          />
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-slate-500">
-                          Edit
-                          <Toggle
-                            on={canEdit}
-                            disabled={selected.isSystemAdmin || !canView}
-                            onChange={() => setPermission(m, true, !canEdit)}
-                          />
-                        </label>
+        {error && <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>}
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Official / Email</th>
+                  {IITGN_MODULES.map(mod => (
+                    <th key={mod.id} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>{mod.name}</span>
+                        <span className="text-[10px] font-normal normal-case text-gray-400">{mod.description}</span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            <p className="p-8 text-sm text-slate-500">Select a user to manage module access.</p>
-          )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUsers.length === 0 ? (
+                  <tr><td colSpan={IITGN_MODULES.length + 1} className="px-6 py-12 text-center text-gray-500">No users found.</td></tr>
+                ) : (
+                  filteredUsers.map(user => {
+                    const userPerms = permissions.filter(p => p.userId === user.id)
+                    return (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{user.name || user.positionTitle}</div>
+                          <div className="text-xs text-gray-500">{user.email}</div>
+                        </td>
+                        {IITGN_MODULES.map(mod => {
+                          const perm = userPerms.find(p => p.moduleName === mod.id)
+                          return (
+                            <td key={mod.id} className="px-4 py-4 whitespace-nowrap text-center">
+                              <div className="flex flex-col items-center gap-1">
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={perm?.canView || false}
+                                    onChange={() => togglePermission(user.id, mod.id, 'canView', perm?.canView || false)}
+                                    className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                                  />
+                                  <span className="text-xs text-gray-600">View</span>
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={perm?.canEdit || false}
+                                    onChange={() => togglePermission(user.id, mod.id, 'canEdit', perm?.canEdit || false)}
+                                    className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                                  />
+                                  <span className="text-xs text-gray-600">Edit</span>
+                                </label>
+                              </div>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
