@@ -27,7 +27,7 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
     title: '', description: '',
     startTime: toLocalDateTimeValue(defaultStartRef),
     endTime: toLocalDateTimeValue(defaultEndRef),
-    isAllDay: false, sourceModule: allowedModules?.[0] || 'GLOBAL',
+    isAllDay: false, sourceModule: allowedModules?.[0] || 'GLOBAL', eventType: 'MEETING',
     visibility: 'PUBLIC', location: '',
   })
 
@@ -47,7 +47,7 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
         setForm({
           title: initialEvent.title, description: initialEvent.description || '',
           startTime: toLocalDateTimeValue(start), endTime: toLocalDateTimeValue(end),
-          isAllDay: initialEvent.isAllDay, sourceModule: initialEvent.sourceModule,
+          isAllDay: initialEvent.isAllDay, sourceModule: initialEvent.sourceModule, eventType: ((initialEvent as any).eventType as string) || 'MEETING',
           visibility: initialEvent.visibility, location: locationStr,
         })
       } else {
@@ -56,7 +56,7 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
         setForm({
           title: '', description: '',
           startTime: toLocalDateTimeValue(s), endTime: toLocalDateTimeValue(e),
-          isAllDay: false, sourceModule: allowedModules?.[0] || 'GLOBAL',
+          isAllDay: false, sourceModule: allowedModules?.[0] || 'GLOBAL', eventType: 'MEETING',
           visibility: 'PUBLIC', location: '',
         })
       }
@@ -96,6 +96,7 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
       endTime: endIso,
       isAllDay: form.isAllDay,
       sourceModule: form.sourceModule,
+      eventType: form.eventType,
       visibility: form.visibility,
       metadata: { location: form.location },
     })
@@ -133,6 +134,17 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
             <select value={form.sourceModule} onChange={(e) => setForm({ ...form, sourceModule: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
               {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+            <select value={form.eventType} onChange={(e) => setForm({ ...form, eventType: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+              <option value="MEETING">Meeting</option>
+              <option value="TASK">Task / Maintenance</option>
+              <option value="REMINDER">Reminder / Holiday</option>
+              <option value="DEADLINE">Deadline</option>
             </select>
           </div>
 

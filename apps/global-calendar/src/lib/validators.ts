@@ -1,7 +1,26 @@
 import { z } from 'zod'
 
-export const SOURCE_MODULES = ['IWD', 'FINANCE', 'RND', 'HMS', 'ROOM_INFO', 'ADMIN'] as const
-export const PERMISSION_MODULES = ['IWD', 'FINANCE', 'RND', 'HMS', 'ROOM_INFO', 'ADMIN', 'GLOBAL'] as const
+// Updated to match IITGN functional departments
+export const SOURCE_MODULES = [
+  'ACADEMIC_AFFAIRS',
+  'STUDENT_WELFARE',
+  'INFRASTRUCTURE',
+  'RESEARCH_ADVANCEMENT',
+  'FACULTY_AFFAIRS',
+  'INSTITUTE_EVENTS',
+  'GLOBAL'
+] as const
+
+export const PERMISSION_MODULES = [
+  'ACADEMIC_AFFAIRS',
+  'STUDENT_WELFARE',
+  'INFRASTRUCTURE',
+  'RESEARCH_ADVANCEMENT',
+  'FACULTY_AFFAIRS',
+  'INSTITUTE_EVENTS',
+  'GLOBAL'
+] as const
+
 export const EVENT_TYPES = ['MEETING', 'TASK', 'DEADLINE', 'REMINDER', 'MILESTONE'] as const
 export const VISIBILITIES = ['PUBLIC', 'MODULE_ONLY', 'ADMIN_ONLY'] as const
 
