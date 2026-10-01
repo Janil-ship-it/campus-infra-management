@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  name          String
+  positionTitle String
+  passwordHash  String
+  isSystemAdmin Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  permissions       UserModulePermission[]
+  eventParticipants EventParticipant[]
+
+  @@map("users")
+}
+
+model CalendarEvent {
+  id             BigInt   @id @default(autoincrement())
+  sourceModule   String
+  title          String
+  description    String?
+  startTime      DateTime
+  endTime        DateTime
+  isAllDay       Boolean  @default(false)
+  eventType      String
+  visibility     String   @default("MODULE_ONLY")
+  recurrenceRule String?
+  metadata       Json?
+  status         String   @default("ACTIVE")
+  createdBy      Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  participants EventParticipant[]
+  auditLogs    AuditLog[]
+
+  @@index([sourceModule])
+  @@index([startTime, endTime])
+  @@map("calendar_events")
+}
+
+model EventParticipant {
+  id         BigInt @id @default(autoincrement())
+  eventId    BigInt
+  userId     Int
+  role       String @default("ATTENDEE")
+  rsvpStatus String @default("PENDING")
+
+  event CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("event_participants")
+}
+
+model UserModulePermission {
+  id         BigInt   @id @default(autoincrement())
+  userId     Int
+  moduleName String
+  canView    Boolean  @default(true)
+  canEdit    Boolean  @default(false)
+  grantedBy  Int
+  grantedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleName])
+  @@map("user_module_permissions")
+}
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  action    String
+  eventId   BigInt?
+  userId    Int
+  ipAddress String?
+  details   Json?
+  timestamp DateTime @default(now())
+
+  event CalendarEvent? @relation(fields: [eventId], references: [id])
+
+  @@index([timestamp])
+  @@index([userId])
+  @@map("calendar_audit_log")
+}
+
+model Room {
+  id         Int    @id @default(autoincrement())
+  building   String
+  roomNumber String
+  label      String @unique
+  purpose    String
+  capacity   Int?
+
+  @@index([building])
+  @@map("rooms")
+}
+
+model ServiceKey {
+  id          Int       @id @default(autoincrement())
+  name        String
+  moduleName  String
+  keyHash     String    @unique
+  keyPrefix   String
+  permissions Json
+  isActive    Boolean   @default(true)
+  lastUsed    DateTime?
+  createdAt   DateTime  @default(now())
+  createdBy   Int
+
+  @@index([moduleName])
+  @@index([keyHash])
+  @@map("service_keys")
+}
+
+// ============================================================
+// FIC Contact & Role Hierarchy Models
+// ============================================================
+
+model FunctionalCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  contacts FicContact[]
+
+  @@map("functional_categories")
+}
+
+model FicContact {
+  id                   Int      @id @default(autoincrement())
+  officialTitle        String
+  primaryEmail         String   @unique
+  secondaryEmails      String?
+  systemRole           String   @default("FIC_COORDINATOR")
+  functionalCategoryId Int
+  parentContactId      Int?
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  functionalCategory FunctionalCategory @relation(fields: [functionalCategoryId], references: [id])
+  parentContact      FicContact?        @relation("ContactHierarchy", fields: [parentContactId], references: [id])
+  secondaryContacts  FicContact[]       @relation("ContactHierarchy")
+
+  @@index([functionalCategoryId])
+  @@index([systemRole])
+  @@index([parentContactId])
+  @@map("fic_contacts")
+}
