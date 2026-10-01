@@ -6,7 +6,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import rrulePlugin from '@fullcalendar/rrule'
-import { Plus, CalendarDays, Clock3, Layers, ShieldCheck } from 'lucide-react'
+import { Plus, CalendarDays, Clock3, Layers } from 'lucide-react'
 import { toast } from 'sonner'
 
 import EventSidebar from '@/components/EventSidebar'
@@ -181,7 +181,6 @@ export default function Home() {
     { label: 'Total Events', value: String(events.length), icon: CalendarDays, color: 'bg-blue-50 text-blue-600', onClick: () => document.getElementById('calendar-section')?.scrollIntoView({ behavior: 'smooth' }) },
     { label: 'Next 7 Days', value: String(next7), icon: Clock3, color: 'bg-emerald-50 text-emerald-600', onClick: () => setView('timeGridWeek') },
     { label: 'Active Modules', value: String(modulesVisible), icon: Layers, color: 'bg-violet-50 text-violet-600', onClick: () => { window.location.href = '/directory' } },
-    { label: 'Access Level', value: isAdmin ? 'Admin' : canEdit ? 'Editor' : 'Viewer', icon: ShieldCheck, color: 'bg-amber-50 text-amber-600', onClick: () => { window.location.href = '/admin/permissions' } },
   ]
 
   return (
@@ -204,7 +203,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 lg:grid-cols-3">
         {stats.map((stat) => (
           <div key={stat.label} onClick={stat.onClick} title="Click to navigate" className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-blue-300">
             <div className="flex items-center justify-between">

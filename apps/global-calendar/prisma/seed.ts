@@ -12,75 +12,52 @@ function hashPassword(password: string): string {
 async function main() {
   console.log('🌱 Seeding database...')
 
-  // SUPER ADMIN
-  const sushobhanPassword = hashPassword('Sushobhan@123')
+  // SUPER ADMIN = Prof. Sushobhan Sen via his FIC Directory ID
+  // (Dean, Campus Development — Project In-charge)
+  const ADMIN_EMAIL = 'dean.campus@iitgn.ac.in'
+  const ADMIN_PASSWORD = 'Iitgn@deancampus' // matches FIC_CREDENTIALS.csv pattern
+  const adminHash = hashPassword(ADMIN_PASSWORD)
+
   const sushobhan = await prisma.user.upsert({
-    where: { email: 'sushobhan@iitgn.ac.in' },
-    update: { passwordHash: sushobhanPassword, isSystemAdmin: true },
-    create: {
-      email: 'sushobhan@iitgn.ac.in',
+    where: { email: ADMIN_EMAIL },
+    update: {
+      passwordHash: adminHash,
+      isSystemAdmin: true,
       name: 'Prof. Sushobhan Sen',
       positionTitle: 'Dean, Campus Development (Project In-charge)',
-      passwordHash: sushobhanPassword,
+    },
+    create: {
+      email: ADMIN_EMAIL,
+      name: 'Prof. Sushobhan Sen',
+      positionTitle: 'Dean, Campus Development (Project In-charge)',
+      passwordHash: adminHash,
       isSystemAdmin: true,
     },
   })
-  
-  const adminPassword = hashPassword('admin123')
+  console.log(`✅ Super Admin (FIC ID): ${sushobhan.email}`)
+
+  // Emergency fallback system account (not advertised)
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@iitgn.ac.in' },
-    update: { passwordHash: adminPassword, isSystemAdmin: true },
-    create: { email: 'admin@iitgn.ac.in', name: 'System Administrator', positionTitle: 'Admin', passwordHash: adminPassword, isSystemAdmin: true },
+    update: { passwordHash: hashPassword('admin123'), isSystemAdmin: true },
+    create: {
+      email: 'admin@iitgn.ac.in',
+      name: 'System Administrator',
+      positionTitle: 'Admin',
+      passwordHash: hashPassword('admin123'),
+      isSystemAdmin: true,
+    },
   })
 
   for (const user of [sushobhan, adminUser]) {
     await prisma.userModulePermission.upsert({
       where: { userId_moduleName: { userId: user.id, moduleName: 'GLOBAL' } },
-      update: {},
+      update: { canView: true, canEdit: true },
       create: { userId: user.id, moduleName: 'GLOBAL', canView: true, canEdit: true, grantedBy: user.id },
     })
   }
 
-  // SEED IITGN ROOMS
-  const existingRooms = await prisma.room.count()
-  if (existingRooms === 0) {
-    const iitgnRooms = [
-      // Academic Blocks
-      { building: 'AB1', roomNumber: '101', label: 'AB1-101 (Lecture)', purpose: 'Classroom', capacity: 60 },
-      { building: 'AB1', roomNumber: '205', label: 'AB1-205 (Seminar)', purpose: 'Seminar Hall', capacity: 120 },
-      { building: 'AB2', roomNumber: '102', label: 'AB2-102 (Lab)', purpose: 'Computer Lab', capacity: 40 },
-      { building: 'AB3', roomNumber: '301', label: 'AB3-301 (Smart Class)', purpose: 'Classroom', capacity: 50 },
-      { building: 'AB4', roomNumber: 'G01', label: 'AB4-G01 (Design Studio)', purpose: 'Studio', capacity: 30 },
-      { building: 'AB5', roomNumber: '204', label: 'AB5-204 (Research Lab)', purpose: 'Laboratory', capacity: 20 },
-      
-      // Lecture Hall Complex (LHC)
-      { building: 'LHC', roomNumber: 'LH-1', label: 'LHC-LH1 (Main Auditorium)', purpose: 'Auditorium', capacity: 500 },
-      { building: 'LHC', roomNumber: 'LH-2', label: 'LHC-LH2 (Lecture Hall)', purpose: 'Lecture Hall', capacity: 200 },
-      { building: 'LHC', roomNumber: 'LH-3', label: 'LHC-LH3 (Lecture Hall)', purpose: 'Lecture Hall', capacity: 200 },
-      { building: 'LHC', roomNumber: 'LH-4', label: 'LHC-LH4 (Tutorial)', purpose: 'Tutorial Room', capacity: 40 },
-      
-      // Core Building & Admin
-      { building: 'Core Building', roomNumber: 'CB-101', label: 'Board Room (CB1)', purpose: 'Meeting Room', capacity: 20 },
-      { building: 'Core Building', roomNumber: 'CB-201', label: 'Director Conference Room', purpose: 'Meeting Room', capacity: 15 },
-      { building: 'Core Building', roomNumber: 'CB-Audi', label: 'Core Auditorium', purpose: 'Auditorium', capacity: 300 },
-      
-      // Student Activity Centre (SAC)
-      { building: 'SAC', roomNumber: 'SAC-Audi', label: 'SAC Auditorium', purpose: 'Auditorium', capacity: 800 },
-      { building: 'SAC', roomNumber: 'SAC-101', label: 'SAC Committee Room', purpose: 'Meeting Room', capacity: 25 },
-      { building: 'SAC', roomNumber: 'SAC-Gym', label: 'SAC Gymnasium', purpose: 'Sports Facility', capacity: 100 },
-      
-      // Library & Others
-      { building: 'Library', roomNumber: 'LIB-Sem', label: 'Library Seminar Hall', purpose: 'Seminar Hall', capacity: 150 },
-      { building: 'Library', roomNumber: 'LIB-Disc', label: 'Library Discussion Room', purpose: 'Meeting Room', capacity: 10 },
-      { building: 'Guest House', roomNumber: 'GH-Dining', label: 'Guest House Dining Hall', purpose: 'Dining', capacity: 60 },
-      { building: 'Guest House', roomNumber: 'GH-Lounge', label: 'Guest House Lounge', purpose: 'Lounge', capacity: 20 },
-    ]
-    
-    await prisma.room.createMany({ data: iitgnRooms })
-    console.log(`🏢 Seeded ${iitgnRooms.length} IITGN rooms`)
-  }
-
-  // Sample Events
+  // Sample events (only if empty)
   const existingEvents = await prisma.calendarEvent.count()
   if (existingEvents === 0) {
     const sampleEvents = [
@@ -103,7 +80,7 @@ async function main() {
         endTime: new Date('2026-09-26T16:00:00Z'),
         eventType: 'MEETING',
         visibility: 'MODULE_ONLY',
-        metadata: { room: 'Board Room (CB1)', attendees: 15 },
+        metadata: { location: 'Board Room (CB1)', attendees: 15 },
         createdBy: sushobhan.id,
       },
     ]
@@ -120,6 +97,7 @@ async function main() {
         },
       })
     }
+    console.log(`📊 Created ${sampleEvents.length} sample events`)
   }
 
   console.log('✅ Base seeding completed!')
