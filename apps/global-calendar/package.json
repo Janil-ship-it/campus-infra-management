@@ -13,7 +13,8 @@
     "db:reset": "prisma migrate reset",
     "postinstall": "prisma generate",
     "fic:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/fic-seed.ts",
-    "seed:all": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/fic-seed.ts"
+    "seed:all": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/fic-seed.ts",
+    "import:iitgn": "npx ts-node scripts/import-iitgn-events.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

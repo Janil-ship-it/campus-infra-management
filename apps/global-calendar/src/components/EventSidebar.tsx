@@ -1,5 +1,5 @@
 'use client'
-import { X, Edit, Trash2, MapPin, Clock, Users } from 'lucide-react'
+import { X, Edit, Trash2, MapPin, Clock, Users, Repeat } from 'lucide-react'
 import { IITGN_MODULES } from '@/lib/modules'
 import { CalendarEvent } from '@/types'
 
@@ -15,12 +15,10 @@ interface Props {
 export default function EventSidebar({ event, isOpen, onClose, onEdit, onDelete, canEdit }: Props) {
   if (!isOpen || !event) return null
   const moduleName = IITGN_MODULES.find(m => m.id === event.sourceModule)?.name || event.sourceModule
-
   const start = new Date(event.startTime)
   const end = new Date(event.endTime)
-  
-  // Cast metadata to any to safely access JSON properties
   const meta = (event.metadata || {}) as any
+  const participants = ((event as any).participants ?? []) as any[]
 
   return (
     <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md bg-white shadow-2xl border-l border-gray-200 overflow-y-auto">
@@ -32,7 +30,14 @@ export default function EventSidebar({ event, isOpen, onClose, onEdit, onDelete,
       <div className="p-6 space-y-6">
         <div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h3>
-          <span className="inline-block px-2.5 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">{moduleName}</span>
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-block px-2.5 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">{moduleName}</span>
+            {event.recurrenceRule && (
+              <span className="inline-block px-2.5 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full flex items-center gap-1">
+                <Repeat className="h-3 w-3" /> Recurring
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3 text-sm">
@@ -58,6 +63,20 @@ export default function EventSidebar({ event, isOpen, onClose, onEdit, onDelete,
             <p className="text-gray-700">{event.visibility === 'PUBLIC' ? 'Visible to all campus' : `Visible to ${moduleName} only`}</p>
           </div>
         </div>
+
+        {participants.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-2">Invited Officials ({participants.length})</h4>
+            <div className="space-y-1.5">
+              {participants.map((p: any, i: number) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-800 truncate">{p.user?.name ?? p.user?.email ?? `Official #${p.userId}`}</span>
+                  <span className="text-xs text-gray-500 ml-2">{p.role}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {event.description && (
           <div>
