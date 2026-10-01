@@ -26,7 +26,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <a href="/directory" className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md">Directory</a>
                 <a href="/admin/analytics" className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md">Analytics</a>
                 <a href="/admin/permissions" className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md">Admin</a>
-                <a href="/api/auth/logout" className="ml-2 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-md">Sign out</a>
+                <form action="/api/auth/logout" method="POST" className="inline ml-2">
+                  <button type="submit" className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-md cursor-pointer">
+                    Sign out
+                  </button>
+                </form>
               </nav>
             </div>
           </header>

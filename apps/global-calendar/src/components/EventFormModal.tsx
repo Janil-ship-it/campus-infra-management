@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { IITGN_MODULES } from '@/lib/modules'
 import { RoomSelector } from './RoomSelector'
+import { UserCombobox } from './UserCombobox'
 import { CalendarEvent } from '@/types'
 
 interface Props {
@@ -72,13 +73,6 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
 
   if (!isOpen) return null
   const modules = IITGN_MODULES.filter(m => !allowedModules || allowedModules.includes(m.id))
-  const filteredUsers = users.filter(u =>
-    (u.email || '').toLowerCase().includes(userSearch.toLowerCase()) ||
-    (u.name || '').toLowerCase().includes(userSearch.toLowerCase())
-  )
-
-  const toggleUser = (id: number) => setForm(f => ({ ...f, participantIds: f.participantIds.includes(id) ? f.participantIds.filter(x => x !== id) : [...f.participantIds, id] }))
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault(); setError(null)
     let startIso: string, endIso: string
@@ -207,20 +201,13 @@ export default function EventFormModal({ isOpen, onClose, onSave, initialEvent, 
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase tracking-wide">Invite officials ({form.participantIds.length})</label>
-            <input type="text" value={userSearch} onChange={e => setUserSearch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-md mb-2" placeholder="Search by name or email…" />
-            <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-100">
-              {filteredUsers.length === 0 ? <p className="text-sm text-gray-500 p-3">No matches</p> :
-                filteredUsers.slice(0, 30).map(u => (
-                  <label key={u.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                    <input type="checkbox" checked={form.participantIds.includes(u.id)} onChange={() => toggleUser(u.id)} className="h-4 w-4" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 truncate">{u.name || u.positionTitle}</p>
-                      <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                    </div>
-                  </label>
-                ))}
-            </div>
+            <UserCombobox
+              users={users.map((u: any) => ({ id: u.id, name: u.name || u.positionTitle || 'Unnamed', email: u.email, positionTitle: u.positionTitle }))}
+              selectedIds={form.participantIds}
+              onChange={(ids) => setForm({ ...form, participantIds: ids })}
+              placeholder="Type name, email, or role…"
+            />
+            <p className="text-xs text-gray-500 mt-1">Tip: type to fuzzy-search · ↑↓ navigate · Enter to add · Backspace to remove</p>
           </div>
 
           <div className="flex gap-2 pt-4 border-t border-gray-200">
