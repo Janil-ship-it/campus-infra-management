@@ -13,81 +13,58 @@ function hashPassword(password: string): string {
 async function main() {
   console.log('🌱 Seeding database...')
 
-  const ADMIN_EMAIL = 'dean.campus@iitgn.ac.in'
-  const ADMIN_PASSWORD = 'Iitgn@deancampus'
+  // SOLE SUPER ADMIN — Prof. Sushobhan Sen (Project Mentor)
+  // Real FIC ID from the IITGN directory
+  const ADMIN_EMAIL = 'assoc.dean.space@iitgn.ac.in'
+  const ADMIN_PASSWORD = 'Iitgn@assocdeanspace'
   const adminHash = hashPassword(ADMIN_PASSWORD)
 
-  const sushobhan = await prisma.user.upsert({
+  const mentor = await prisma.user.upsert({
     where: { email: ADMIN_EMAIL },
     update: {
-      passwordHash: adminHash, isSystemAdmin: true,
-      name: 'Prof. Sushobhan Sen', positionTitle: 'Dean, Campus Development (Project In-charge)',
+      passwordHash: adminHash,
+      isSystemAdmin: true,
+      name: 'Prof. Sushobhan Sen',
+      positionTitle: 'Associate Dean, Campus and Space Management (Project Mentor)',
     },
     create: {
-      email: ADMIN_EMAIL, name: 'Prof. Sushobhan Sen',
-      positionTitle: 'Dean, Campus Development (Project In-charge)',
-      passwordHash: adminHash, isSystemAdmin: true,
+      email: ADMIN_EMAIL,
+      name: 'Prof. Sushobhan Sen',
+      positionTitle: 'Associate Dean, Campus and Space Management (Project Mentor)',
+      passwordHash: adminHash,
+      isSystemAdmin: true,
     },
   })
-  console.log(`✅ Super Admin (FIC ID): ${sushobhan.email}`)
+  console.log(`✅ Sole Super Admin: ${mentor.email}`)
 
-  const adminUser = await prisma.user.upsert({
+  // Demote previous admin + restore his true FIC identity
+  await prisma.user.updateMany({
+    where: { email: 'dean.campus@iitgn.ac.in' },
+    data: {
+      isSystemAdmin: false,
+      name: 'Dean, Campus Development',
+      positionTitle: 'Dean, Campus Development',
+    },
+  })
+
+  // Retire the dev admin account permanently
+  await prisma.user.updateMany({
     where: { email: 'admin@iitgn.ac.in' },
-    update: { passwordHash: hashPassword('admin123'), isSystemAdmin: true },
-    create: {
-      email: 'admin@iitgn.ac.in', name: 'System Administrator', positionTitle: 'Admin',
-      passwordHash: hashPassword('admin123'), isSystemAdmin: true,
-    },
+    data: { isSystemAdmin: false, passwordHash: 'RETIRED' },
   })
 
-  for (const user of [sushobhan, adminUser]) {
-    await prisma.userModulePermission.upsert({
-      where: { userId_moduleName: { userId: user.id, moduleName: 'GLOBAL' } },
-      update: { canView: true, canEdit: true },
-      create: { userId: user.id, moduleName: 'GLOBAL', canView: true, canEdit: true, grantedBy: user.id },
-    })
-  }
+  // GLOBAL permission for the mentor
+  await prisma.userModulePermission.upsert({
+    where: { userId_moduleName: { userId: mentor.id, moduleName: 'GLOBAL' } },
+    update: { canView: true, canEdit: true },
+    create: { userId: mentor.id, moduleName: 'GLOBAL', canView: true, canEdit: true, grantedBy: mentor.id },
+  })
 
-  // Seed REAL IITGN rooms
+  // Rooms (only if empty)
   const existingRooms = await prisma.room.count()
   if (existingRooms === 0) {
     await prisma.room.createMany({ data: iitgnRooms })
-    console.log(`🏢 Seeded ${iitgnRooms.length} real IITGN rooms from VOIP directory`)
-  } else {
-    console.log(`⏭️  ${existingRooms} rooms already exist — skipping`)
-  }
-
-  const existingEvents = await prisma.calendarEvent.count()
-  if (existingEvents === 0) {
-    const sampleEvents = [
-      {
-        sourceModule: 'INFRASTRUCTURE', title: 'Electrical Maintenance - AB3 2nd Floor',
-        description: 'Scheduled maintenance for electrical points',
-        startTime: new Date('2026-09-25T10:00:00Z'), endTime: new Date('2026-09-25T12:00:00Z'),
-        eventType: 'TASK', visibility: 'MODULE_ONLY',
-        metadata: { location: 'AB3/311 — Campus Development', priority: 'HIGH' },
-        createdBy: sushobhan.id,
-      },
-      {
-        sourceModule: 'ACADEMIC_AFFAIRS', title: 'Senate Meeting',
-        description: 'Quarterly academic review',
-        startTime: new Date('2026-09-26T14:00:00Z'), endTime: new Date('2026-09-26T16:00:00Z'),
-        eventType: 'MEETING', visibility: 'MODULE_ONLY',
-        metadata: { location: 'AB3 Board Room — Main', attendees: 15 },
-        createdBy: sushobhan.id,
-      },
-    ]
-
-    for (const eventData of sampleEvents) {
-      const event = await prisma.calendarEvent.create({ data: eventData })
-      await prisma.auditLog.create({
-        data: {
-          action: 'CREATE', eventId: event.id, userId: sushobhan.id, ipAddress: '127.0.0.1',
-          details: { sourceModule: eventData.sourceModule, title: eventData.title },
-        },
-      })
-    }
-    console.log(`📊 Created ${sampleEvents.length} sample events`)
+    console.log(`🏢 Seeded ${iitgnRooms.length} real IITGN rooms`)
   }
 
   console.log('✅ Base seeding completed!')
