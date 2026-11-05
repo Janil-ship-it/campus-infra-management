@@ -6,6 +6,7 @@ import SvgMap from '@/components/SvgMap';
 type AuthUser = { username: string; role: 'admin' | 'guest' } | null;
 
 export default function SpaceAllocationApp() {
+  const spreadsheetLink = process.env.NEXT_PUBLIC_GOOGLE_SHEET_URL;
   const [spaces, setSpaces] = useState<any[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<string>('AB3');
   const [selectedFloor, setSelectedFloor] = useState<string>('Ground Floor');
@@ -28,6 +29,35 @@ export default function SpaceAllocationApp() {
   const [newAdminPass, setNewAdminPass] = useState('');
   const [addAdminMsg, setAddAdminMsg] = useState('');
 
+  // Excel sync
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  const loadSpaces = (forceSync = false) => {
+    const url = forceSync ? '/api/spaces?sync=1' : '/api/spaces';
+    return fetch(url)
+      .then((res) => res.json())
+      .then((payload) => {
+        const data = payload.data || [];
+        setSpaces(data);
+        if (payload.error) setDataError(payload.error);
+        else setDataError(null);
+        if (data.length > 0) {
+          setSelectedBuilding((prev) => {
+            const buildings = Array.from(new Set(data.map((d: any) => d.sheet)));
+            if (buildings.includes(prev)) return prev;
+            if (buildings.includes('AB3')) return 'AB3';
+            return (buildings[0] as string) || prev;
+          });
+        }
+        return payload;
+      })
+      .catch(() => {
+        setDataError('Could not load space data');
+      });
+  };
+
   // Check session on load
   useEffect(() => {
     fetch('/api/auth/me')
@@ -39,18 +69,29 @@ export default function SpaceAllocationApp() {
       .catch(() => setAuthLoading(false));
   }, []);
 
+  // Load from Excel-backed API (auto-syncs if spreadsheet is newer than cache)
   useEffect(() => {
-    fetch('/all_spaces.json')
-      .then((res) => res.json())
-      .then((data) => {
-        setSpaces(data);
-        if (data.length > 0) {
-          const buildings = Array.from(new Set(data.map((d: any) => d.sheet)));
-          if (buildings.includes('AB3')) setSelectedBuilding('AB3');
-          else setSelectedBuilding(buildings[0] as string);
-        }
-      });
+    loadSpaces(false);
   }, []);
+
+  const handleSyncFromExcel = async () => {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch('/api/spaces/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncMsg(data.error || 'Sync failed');
+      } else {
+        setSyncMsg(data.message || `Synced ${data.count} rooms`);
+        await loadSpaces(false);
+      }
+    } catch {
+      setSyncMsg('Network error while syncing');
+    }
+    setSyncing(false);
+    setTimeout(() => setSyncMsg(null), 4000);
+  };
 
   const buildings = useMemo(() => {
     const list = Array.from(new Set(spaces.map((s) => s.sheet)));
@@ -92,13 +133,29 @@ export default function SpaceAllocationApp() {
     return spaces.filter((s) => {
       const matchBuilding = s.sheet === selectedBuilding;
       const matchFloor = s.floor === selectedFloor;
+      const query = searchQuery.toLowerCase();
       const matchSearch =
-        s.room.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (s.allocation && s.allocation.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (s.type && s.type.toLowerCase().includes(searchQuery.toLowerCase()));
+        s.room.toLowerCase().includes(query) ||
+        (s.allocation && s.allocation.toLowerCase().includes(query)) ||
+        (s.type && s.type.toLowerCase().includes(query)) ||
+        Object.values(s.additional_fields || {}).some((value) =>
+          String(value || '').toLowerCase().includes(query),
+        );
       return matchBuilding && matchFloor && matchSearch;
     });
   }, [spaces, selectedBuilding, selectedFloor, searchQuery]);
+
+  const additionalColumns = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          currentRooms.flatMap((room) =>
+            Object.keys(room.additional_fields || {}),
+          ),
+        ),
+      ),
+    [currentRooms],
+  );
 
   const getTypeBadgeColor = (type: string) => {
     switch (type?.toLowerCase()) {
@@ -175,21 +232,37 @@ export default function SpaceAllocationApp() {
       <header className="mb-6 border-b pb-4 flex justify-between items-center flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">IITGN Academic Block Space Allocation</h1>
+          <div className="mt-2">
+            {spreadsheetLink ? (
+              <a
+                href={spreadsheetLink}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Open source spreadsheet
+              </a>
+            ) : (
+              <span className="inline-flex h-9 items-center rounded-lg border border-dashed border-slate-300 bg-white px-3 text-sm text-slate-500">
+                Google Sheet link will be added here
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           {/* View Mode Switch */}
-          <div className="flex bg-slate-200 rounded-lg p-1 text-sm font-medium">
+          <div className="flex items-center bg-slate-200 rounded-lg p-1 text-sm font-medium">
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded-md transition ${viewMode === 'grid' ? 'bg-white shadow text-slate-800' : 'text-slate-600 hover:text-slate-900'
+          className={`h-9 min-w-[112px] px-3 rounded-md transition inline-flex items-center justify-center ${viewMode === 'grid' ? 'bg-white shadow text-slate-800' : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               Visual Layout
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 rounded-md transition ${viewMode === 'table' ? 'bg-white shadow text-slate-800' : 'text-slate-600 hover:text-slate-900'
+              className={`h-9 min-w-[112px] px-3 rounded-md transition inline-flex items-center justify-center ${viewMode === 'table' ? 'bg-white shadow text-slate-800' : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               Data Table
@@ -211,16 +284,26 @@ export default function SpaceAllocationApp() {
                     </span>
                   </span>
                   {isAdmin && (
-                    <button
-                      onClick={() => setShowAddAdmin(true)}
-                      className="text-xs bg-slate-100 hover:bg-slate-200 border px-2 py-1 rounded"
-                    >
-                      + Admin
-                    </button>
+                    <>
+                      <button
+                        onClick={handleSyncFromExcel}
+                        disabled={syncing}
+                        className="h-9 min-w-[112px] inline-flex items-center justify-center text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white px-3 rounded-lg disabled:opacity-50"
+                        title="Sync the latest spreadsheet data"
+                      >
+                        {syncing ? 'Syncing…' : 'Sync Spreadsheet'}
+                      </button>
+                      <button
+                        onClick={() => setShowAddAdmin(true)}
+                        className="h-9 min-w-[112px] inline-flex items-center justify-center text-sm font-medium bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3 rounded-lg"
+                      >
+                        + Admin
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={handleLogout}
-                    className="text-sm text-red-600 hover:text-red-800 font-medium"
+                    className="h-9 min-w-[112px] inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-800"
                   >
                     Logout
                   </button>
@@ -228,7 +311,7 @@ export default function SpaceAllocationApp() {
               ) : (
                 <button
                   onClick={() => setShowLogin(true)}
-                  className="bg-slate-800 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-slate-900"
+                  className="h-9 min-w-[112px] inline-flex items-center justify-center bg-slate-800 text-white px-3 rounded-lg text-sm font-semibold hover:bg-slate-900"
                 >
                   Login
                 </button>
@@ -238,13 +321,24 @@ export default function SpaceAllocationApp() {
         </div>
       </header>
 
+      {(syncMsg || dataError) && (
+        <div
+          className={`mb-3 text-sm px-3 py-2 rounded-lg border ${dataError || (syncMsg && !syncMsg.startsWith('Synced'))
+              ? 'bg-red-50 text-red-800 border-red-200'
+              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}
+        >
+          {dataError || syncMsg}
+        </div>
+      )}
+
       {/* Building Tabs */}
       <div className="flex space-x-2 overflow-x-auto pb-2 mb-4 border-b">
         {buildings.map((b) => (
           <button
             key={b}
             onClick={() => setSelectedBuilding(b)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition ${selectedBuilding === b
+            className={`h-9 inline-flex items-center justify-center px-4 rounded-lg text-sm font-semibold whitespace-nowrap transition ${selectedBuilding === b
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'bg-white border text-slate-700 hover:bg-slate-100'
               }`}
@@ -263,7 +357,7 @@ export default function SpaceAllocationApp() {
               <button
                 key={f}
                 onClick={() => setSelectedFloor(f)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${selectedFloor === f
+                className={`h-9 inline-flex items-center justify-center px-3 rounded-md text-xs font-medium transition ${selectedFloor === f
                     ? 'bg-slate-800 text-white'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
@@ -296,14 +390,17 @@ export default function SpaceAllocationApp() {
 
       {/* Data Table */}
       {viewMode === 'table' && (
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm">
+        <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
+          <table className="w-full min-w-max text-left text-sm">
             <thead className="bg-slate-100 text-slate-700 border-b">
               <tr>
                 <th className="p-3">Room</th>
                 <th className="p-3">Type</th>
                 <th className="p-3">Allocation</th>
                 <th className="p-3">Intended Allocation</th>
+                {additionalColumns.map((column) => (
+                  <th key={column} className="p-3">{column}</th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -319,6 +416,11 @@ export default function SpaceAllocationApp() {
                   </td>
                   <td className="p-3 text-slate-800">{room.allocation}</td>
                   <td className="p-3 text-slate-500 italic">{room.intended_allocation || '-'}</td>
+                  {additionalColumns.map((column) => (
+                    <td key={column} className="p-3 text-slate-700">
+                      {room.additional_fields?.[column] || '-'}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -357,10 +459,15 @@ export default function SpaceAllocationApp() {
                   <strong>Intended Allocation:</strong> {selectedRoom.intended_allocation}
                 </p>
               )}
+              {Object.entries(selectedRoom.additional_fields || {}).map(([label, value]) => (
+                <p key={label}>
+                  <strong className="text-slate-600">{label}:</strong> {String(value || '-')}
+                </p>
+              ))}
             </div>
             <button
               onClick={() => setSelectedRoom(null)}
-              className="mt-6 w-full bg-slate-800 text-white py-2 rounded-lg font-medium hover:bg-slate-900"
+              className="mt-6 h-9 w-full bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900"
             >
               Close
             </button>
@@ -406,14 +513,14 @@ export default function SpaceAllocationApp() {
                 <button
                   type="submit"
                   disabled={loginLoading}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                  className="h-9 flex-1 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loginLoading ? 'Logging in...' : 'Login'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowLogin(false)}
-                  className="px-4 py-2 border rounded-lg text-sm hover:bg-slate-50"
+                  className="h-9 flex-1 border rounded-lg text-sm hover:bg-slate-50"
                 >
                   Cancel
                 </button>
@@ -469,7 +576,7 @@ export default function SpaceAllocationApp() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
+                  className="h-9 flex-1 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
                 >
                   Create Admin
                 </button>
@@ -479,7 +586,7 @@ export default function SpaceAllocationApp() {
                     setShowAddAdmin(false);
                     setAddAdminMsg('');
                   }}
-                  className="px-4 py-2 border rounded-lg text-sm hover:bg-slate-50"
+                  className="h-9 flex-1 border rounded-lg text-sm hover:bg-slate-50"
                 >
                   Close
                 </button>

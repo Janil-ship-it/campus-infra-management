@@ -1,7 +1,17 @@
 [
-    {
-        "username": "admin",
-        "passwordHash": "0052594f121b72a2b3e8abc68c4a5d35689633c762eb875b6ec1c0e4de6c8506",
-        "role": "admin"
-    }
+  {
+    "username": "admin",
+    "passwordHash": "0052594f121b72a2b3e8abc68c4a5d35689633c762eb875b6ec1c0e4de6c8506",
+    "role": "admin"
+  },
+  {
+    "username": "admin2",
+    "passwordHash": "b0df2a3b82396946fbfe9e67764e21077bc084e777b80fd520e360b9b2f1e4a2",
+    "role": "admin"
+  },
+  {
+    "username": "admin3",
+    "passwordHash": "ac60340bbe3a021ab2b687bf1a1924163d8f71b7478e0e02963f41fb46a5e600",
+    "role": "admin"
+  }
 ]

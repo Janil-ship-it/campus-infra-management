@@ -8,7 +8,10 @@ This document tells you exactly how to change data, add rooms, change floor plan
 
 1. How to change room data (allocation, type, add new rooms, etc.)
 
-All the room information comes from one Excel file.
+Room data can come from the local Excel workbook or, when configured, a Google Sheet.
+The Google Sheet link is intentionally shown as a placeholder in the app until you add
+the link. The existing local Excel workflow continues to work if Google Sheets is not
+configured.
 
 Step-by-step:
 
@@ -18,9 +21,9 @@ Step-by-step:
 
 Open the Excel file:
 
-CD Office Master Space Allocation.xlsx
+frontend/data/CD Office Master Space Allocation.xlsx
 
-(It is usually in the project root or in the attachments / data folder.)
+If using Google Sheets instead, use the tab layout described in section 7.
 
 
 
@@ -74,21 +77,17 @@ Re-generate the data file that the website uses:
 
 
 
-Open a terminal in the project folder.
+Open a terminal in the room_module/frontend folder.
 
 
 
-Run the parser script (the exact command depends on your setup, usually):
+Run the parser script:
 
-python data-scripts/parse_excel.py
-
-or
-
-python parse_excel.py
+python scripts\parse_excel.py data\CD Office Master Space Allocation.xlsx
 
 
 
-This will update the file public/all_spaces.json (or all_spaces.json).
+This updates frontend/public/all_spaces.json.
 
 
 
@@ -97,7 +96,10 @@ The new data should now appear.
 
 
 
-Important: After changing the Excel, you must run the parser script. Just saving the Excel is not enough.
+Important: After changing the local Excel workbook, run the parser script. Saving the
+workbook alone does not update app data. For Google Sheets, an admin can click
+Sync Spreadsheet in the app; the button fetches the latest data from the configured
+Google Sheet endpoint.
 
 
 
@@ -370,6 +372,9 @@ Click Create Admin.
 
 The new person can now login with those details and will also be able to edit layouts.
 
+The app currently supports admin accounts and the built-in guest view. There is no
+separate regular-user registration or user-management screen.
+
 
 
 5. Where important files live
@@ -394,17 +399,17 @@ Room data (Excel source)
 
 
 
-CD Office Master Space Allocation.xlsx
+frontend/data/CD Office Master Space Allocation.xlsx
 
 
 
 
 
-Data the website actually reads
+Cached data the website reads
 
 
 
-public/all_spaces.json
+frontend/public/all_spaces.json
 
 
 
@@ -434,7 +439,7 @@ Admin usernames & passwords
 
 
 
-data/users.json (passwords are encrypted)
+frontend/data/users.json (passwords are hashed)
 
 
 
@@ -450,8 +455,9 @@ app/api/... and lib/auth.ts
 
 6. Common problems & fixes
 
-I changed the Excel but nothing changed on the website
-→ You forgot to run the Python parser script. Run it and refresh the browser.
+I changed the local Excel but nothing changed on the website
+→ Run the Python parser from frontend/ and refresh the browser. For Google Sheets,
+   verify GOOGLE_APPS_SCRIPT_URL and use the admin sync button.
 
 The floor plan image does not appear
 → Check the file name follows the per-floor rule exactly (example: ab3_ground_floor.png) and it is inside the public folder.
@@ -509,3 +515,51 @@ Refresh the website → the new building tab appears.
 Login as admin → arrange the room boxes on each floor → click Save Layout.
 
 Done!
+
+7. Google Sheets setup and adding data
+
+The Google Sheet is a read-only data source for the app. It does not write changes
+back to the Sheet. The app displays a placeholder until you configure its link.
+
+1. Open the source Google Sheet and choose Extensions → Apps Script.
+2. Replace the editor contents with the full script in
+   frontend/apps-script/Code.gs, then save.
+3. Choose Deploy → New deployment → Web app. Set Execute as to your account and
+   access to Anyone so the app server can read the JSON. The script only implements
+   a read-only doGet; do not put private data in a publicly readable spreadsheet.
+4. Deploy and copy the Web app URL ending in /exec.
+5. In room_module/frontend/.env.local, set:
+
+   GOOGLE_APPS_SCRIPT_URL=https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+   NEXT_PUBLIC_GOOGLE_SHEET_URL=https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
+
+6. Restart the Next.js server. Admins can use Sync Spreadsheet to refresh app data
+   from the Sheet. When GOOGLE_APPS_SCRIPT_URL is unset, local Excel sync remains
+   active. Set the environment variables on the production host as well; .env.local
+   is for local development only.
+
+Google Sheet tab layout:
+
+- Each standard building tab must have a header row with at least these first five
+  columns in order: Building, Room, Type, Allocation, Intended allocation.
+- Put floor labels in column A on their own row, with the remaining cells empty
+  (for example Ground Floor, First Floor). Room records follow beneath that
+  floor label. Every room needs a value in the Room column.
+- Add extra columns after the five standard columns and give each one a unique
+  header. Their values appear as extra columns in Data Table and as fields in room
+  details.
+- Add a new building by adding a tab with this same layout. Its tab name becomes
+  the building tab in the app. Add a new floor by adding its floor-label row and
+  room records; the floor selector is generated from the data.
+- Add a room by adding a row beneath its floor label. Sync the data; no app code
+  change is needed.
+- Existing AB7, AB8, and AB9 tabs use legacy special parsing. Keep their current
+  layouts unless changing the Apps Script and local Excel parser together.
+- A new building/floor data tab does not generate a floor-plan image or saved map
+  layout. Add the correctly named image under frontend/public/, then arrange and
+  save the room boxes as an admin. A new Next.js route/page is a code change and is
+  not created by adding a spreadsheet tab.
+
+If sheet sync fails, check that the web app deployment is active, the /exec URL is
+correct, the Sheet is readable by the deployment, and the server was restarted
+after GOOGLE_APPS_SCRIPT_URL was set.

@@ -37,7 +37,18 @@ export default function SvgMap({
             if (!savedPositions[key].w) savedPositions[key].w = 100;
             if (!savedPositions[key].h) savedPositions[key].h = 70;
           });
-          setPositions(savedPositions);
+          const mergedPositions = { ...savedPositions };
+          rooms.forEach((room, index) => {
+            if (!mergedPositions[room.room]) {
+              mergedPositions[room.room] = {
+                x: (index % 5) * 140 + 50,
+                y: Math.floor(index / 5) * 100 + 50,
+                w: 100,
+                h: 70,
+              };
+            }
+          });
+          setPositions(mergedPositions);
           return;
         }
       } catch (e) {}
@@ -143,14 +154,19 @@ export default function SvgMap({
   // Image and boxes share the same coordinate space → they stay matched
   // at any browser zoom level (including 67%).
   const CANVAS_W = 1800;
-  const CANVAS_H = 1200;
+  const rowsNeeded = Math.ceil(rooms.length / 5);
+  const furthestRoomBottom = rooms.reduce((bottom, room) => {
+    const pos = positions[room.room];
+    return pos ? Math.max(bottom, pos.y + pos.h + 50) : bottom;
+  }, 0);
+  const CANVAS_H = Math.max(1200, rowsNeeded * 100 + 100, furthestRoomBottom);
 
   return (
     <div className="relative">
       <div className="absolute top-4 right-4 z-10 flex space-x-2 items-center">
         <button
           onClick={() => setShowBackground(!showBackground)}
-          className="bg-white text-slate-700 border border-slate-300 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 shadow-sm transition"
+          className="h-9 min-w-[112px] inline-flex items-center justify-center bg-white text-slate-700 border border-slate-300 px-3 rounded-lg text-sm font-semibold hover:bg-slate-50 shadow-sm transition"
         >
           {showBackground ? 'Hide Blueprint' : 'Show Blueprint'}
         </button>
@@ -158,7 +174,7 @@ export default function SvgMap({
         {isAdmin ? (
           <button
             onClick={saveLayout}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 shadow-md transition"
+            className="h-9 min-w-[112px] inline-flex items-center justify-center bg-blue-600 text-white px-3 rounded-lg text-sm font-semibold hover:bg-blue-700 shadow-md transition"
           >
             {isSaving ? 'Saved!' : 'Save Layout'}
           </button>
