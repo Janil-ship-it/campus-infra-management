@@ -563,3 +563,40 @@ Google Sheet tab layout:
 If sheet sync fails, check that the web app deployment is active, the /exec URL is
 correct, the Sheet is readable by the deployment, and the server was restarted
 after GOOGLE_APPS_SCRIPT_URL was set.
+
+8. Deploy the app on Vercel
+
+Use Vercel to host the portal so it stays live without keeping your computer running.
+
+1. Push the project to GitHub.
+2. Sign in to https://vercel.com using GitHub.
+3. Choose Add New → Project.
+4. Import campus-infra-management.
+5. Set Root Directory to room_module.
+6. Add the following environment variables:
+   GOOGLE_APPS_SCRIPT_URL=<copied-sheet Apps Script /exec URL>
+   NEXT_PUBLIC_GOOGLE_SHEET_URL=<copied-sheet edit URL>
+7. Deploy the project.
+
+Vercel will provide a permanent public URL similar to:
+https://campus-infra-management.vercel.app
+
+8. Editing Google Sheet data on the Vercel deployment
+
+1. Make a copy of the existing Google Sheet.
+2. Open Extensions → Apps Script in the copied sheet.
+3. Copy the Apps Script code into the Apps Script editor and save it.
+4. Choose Deploy → New deployment → Web app.
+5. Set Execute as to your account and access to Anyone.
+6. Copy the deployed Web app URL ending in /exec.
+7. Update the two Vercel environment variables with the new script URL and sheet URL.
+8. Redeploy or trigger a deployment restart if the environment variables change.
+
+To test a change:
+
+1. Edit a room or allocation in the copied Google Sheet.
+2. Open the deployed app as an admin.
+3. Click Sync Spreadsheet.
+4. Refresh the app.
+
+The Google Sheet remains the editable source. Its changes are copied into the app when Sync Spreadsheet is clicked.
